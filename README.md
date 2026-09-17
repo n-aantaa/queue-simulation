@@ -1,2 +1,9 @@
 # queue-simulation
-Queue simulation for my Operations Research class
+### MATH 425 - Operations Research
+Queue simulation with random values and generation of descriptive statistics data.
+
+**Author**: Ndeye Anta Mbaye\
+**Date**: 18 September 2026
+
+ -------
+## Imports
