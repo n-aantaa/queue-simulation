@@ -1,5 +1,5 @@
 # Author: Ndeye Anta Mbaye
-# Date: 18 September 2026
+# Date: 19 September 2026
 # simulation.py
 
 # Imports
@@ -73,25 +73,52 @@ pd.DataFrame(stats).round(3).to_csv("results/descriptive_statistics.csv", index=
 # Assume management wants at least 95% of customers to wait no more than 15 minutes.
 # Use the M/M/1 relationship, P(Wq > t) = ρ * exp[−(μ−λ)t]  where t = 15/60 hours.
 results = []
-percentiles = [97.5, 50, 75, 90, 95, 97.5]
+percentiles = [50, 75, 90, 95, 97.5]
+
 # Use the 97.5th percentile of λ as the design demand level.
+# Repeat the capacity calculation using the 50th, 75th, 90th, 95th, and 97.5th percentiles of demand.
 for percentile in percentiles:
     lambda_p = np.percentile([scenario["arrival_rate"] for scenario in scenarios], percentile)
-
     # Determine the minimum service rate μ required to achieve the 95% target.
-    min_rate = 0
+    min_rate = lambda_p
 
+    while (lambda_p / min_rate) * np.exp(-(min_rate - lambda_p) * (15 / 60)) > 0.05:
+        min_rate += 0.01
+
+    rho = lambda_p / min_rate
+    p= rho * np.exp(-(min_rate - lambda_p) * (15 / 60))
     results.append({
-        "lambda": percentile,
+        "lambda": lambda_p,
         "min_rate": min_rate,
-        "rho": scenario["rho"],
-        "p": percentile,
+        "rho": rho,
+        "probability": p,
     })
 
-
-# Repeat the capacity calculation using the 50th, 75th, 90th, 95th, and 97.5th percentiles of demand and create a sensitivity table.
-
 # Sensitivity table
-
-sensitivity_table = pd.DataFrame(results, index=[f"{p}th percentile" for p in percentiles], columns=["lambda", "min_rate", "rho", "p"])
+sensitivity_table = pd.DataFrame(results, index=[f"{p}th percentile" for p in percentiles], columns=["lambda", "min_rate", "rho", "probability"])
 print(sensitivity_table)
+
+# Service capacity decision table
+design = sensitivity_table.loc["97.5th percentile"]
+
+capacity_decision = pd.DataFrame({
+    "Metric": [
+        "Design Demand Level",
+        "Arrival rate",
+        "Minimum service rate",
+        "P(Wq > 15 minutes)",
+        "Target probability",
+        "95% target achieved?"
+    ],
+    "Value": [
+        "97.5th percentile",
+        design["lambda"],
+        design["min_rate"],
+        design["probability"],
+        0.05,
+        design["probability"] <= 0.05
+    ]
+})
+
+print("\nService Capacity Decision Table")
+print(capacity_decision)
